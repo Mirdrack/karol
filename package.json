@@ -1,0 +1,24 @@
+{
+  "name": "karol",
+  "version": "1.0.0",
+  "description": "A data collector that takes info from an modubs device and then insert the information in a db througth api calls",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf dist/ && babel ./ --out-dir dist/ --ignore ./node_modules,./.babelrc,./package.json,./npm-debug.log --copy-files",
+    "start": "npm run build && node dist/index.js",
+    "dev": "babel-watch ./index.js --ignore ./node_modules,./.babelrc,./package.json,./npm-debug.log --debug 5858"
+  },
+  "author": "mirdrack <mirdrack@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^5.0.1",
+    "request": "^2.85.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-watch": "^2.0.7",
+    "rimraf": "^2.6.2"
+  }
+}
