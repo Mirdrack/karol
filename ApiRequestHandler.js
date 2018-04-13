@@ -1,4 +1,4 @@
-import request from 'request';
+import requestPromise from 'request-promise';
 import LoginException from './Exceptions/LoginException';
 
 export default class ApiRequestHandler {
@@ -12,10 +12,6 @@ export default class ApiRequestHandler {
         this.apiPassword = config.apiPassword;
     }
 
-    log(message) {
-        console.log(message);
-    }
-
     login(callback) {
         let formData = {
             'email': this.apiEmail,
@@ -23,87 +19,93 @@ export default class ApiRequestHandler {
         };
 
         let options = {
-            url: this.loginUrl,
+            method: 'POST',
+            uri: this.loginUrl,
             headers: {
                 'Accept': 'application/json'
             },
-            form: formData
+            form: formData,
+            json: true
         };
 
-        request.post(options, function (error, response, body) {
-            if (response && response.statusCode === 200) {
-                let body = JSON.parse(response.body);
+        requestPromise(options)
+            .then(function (body) {
                 let accessToken = body.access_token;
+                this.accessToken = accessToken;
 
                 if (accessToken !== '' && typeof callback == 'function') {
                     this.accessToken = accessToken;
                     callback();
                 }
-            } else {
-                this._evaluateLoginError(response);
-            }
-        }.bind(this))
-        .on('error', function (error) {
-            // TO DO: parse the error
-            throw new LoginException('Cannot log in!');
-        });
+            }.bind(this))
+            .catch(function (error) {
+                console.log(error.body);
+                throw new LoginException('Cannot log in!');
+            });
     }
 
     saveData(data) {
         let formData = data;
         let options = {
-            url: this.storeUrl,
+            method: 'POST',
+            uri: this.storeUrl,
             headers: {
                 'Accept': 'application/json',
                 'Authorization': 'Bearer ' + this.accessToken
             },
-            form: formData
+            form: formData,
+            json: true
         };
 
-        request.post(options, function (error, response, body) {
-            if (response && response.statusCode === 200) {
-                console.log(response.body);
-            } else if (response && response.statusCode === 401) {
-                console.log('We have to refresh our token');
-                this._refresh();
-            } else {
-                // TO DO: handle this
-                console.log(response.statusCode);
-                console.log('Evaluate save data error');
-            }
-        }.bind(this))
-        .on('error', function (error) {
-            // TO DO: parse the error
-            console.log('Cannot save data!');
-        });
+        requestPromise(options)
+            .then(function (body) {
+                 console.log(body);
+            })
+            .catch(function (error) {
+                if (error.statusCode === 401) {
+                    console.log('We have to refresh our token');
+                    this._refresh(options);
+                } else {
+                    // console.log(Object.keys(error));
+                    console.log('Cannot save data!');
+                    console.log(error.statusCode);
+                }
+
+            }.bind(this));
     }
 
-    _refresh() {
-        console.log('_refresh');
-
+    _refresh(saveOptions) {
         let options = {
-            url: this.refreshUrl,
+            method: 'POST',
+            uri: this.refreshUrl,
             headers: {
                 'Accept': 'application/json',
                 'Authorization': 'Bearer ' + this.accessToken
-            }
+            },
+            json: true
         };
 
-        request.post(options, function (error, response, body) {
-            if (response && response.statusCode === 200) {
-                let body = JSON.parse(response.body);
+        requestPromise(options)
+            .then(function (body) {
                 this.accessToken = body.access_token;
-            } else {
-                console.log('Evaluate refresh error');
-            }
-        }.bind(this))
-        .on('error', function (error) {
-            // TO DO: parse the error
-            console.log('Cannot refresh!');
-        });
+                this._saveOnRefresh(saveOptions);
+            }.bind(this))
+            .catch(function (error) {
+                console.log('Cannot refresh!');
+                console.log(error.body);
+            });
     }
 
-    _evaluateLoginError(response) {
-        console.log(response.statusCode);
+    _saveOnRefresh(options) {
+        // Frist we update the token and then we save the data
+        options.headers.Authorization = 'Bearer ' + this.accessToken;
+        requestPromise(options)
+            .then(function (body) {
+                 console.log(body);
+            })
+            .catch(function (error) {
+                console.log('Cannot save data after refresh!');
+                console.log(error.statusCode);
+            }.bind(this));
     }
 }
