@@ -4,13 +4,26 @@ import configuration from './configuration';
 
 const config = configuration();
 let apiRequestHandler = new ApiRequestHandler(config);
+let cont = 1;
 
-var cont = 1;
-apiRequestHandler.login(); 
-setInterval(monitor, config.interval);
+run();
+
+
+
+function run() {
+    apiRequestHandler.login(monitor);
+}
 
 function monitor() {
-	console.log('Interval: ' + cont);
-	apiRequestHandler.log(cont);
-	cont++;
+    setInterval(pooling, config.interval);
+}
+
+function pooling() {
+    console.log('polling...');
+    let data = {
+        'data_1': cont + Math.random(),
+        'data_2': cont + Math.random()
+    };
+    cont++;
+    apiRequestHandler.saveData(data);
 }
